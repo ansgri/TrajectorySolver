@@ -68,7 +68,7 @@ public class TrajectorySolver {
         }
     }
 
-    private static double h = 1.0e-6;
+    private static double h = 1.0e-3;
 
     // ix < dimX - 1, etc.
     private double dx(int ix, int iy, int iz) {
@@ -211,13 +211,18 @@ public class TrajectorySolver {
         }
     }
 
+    private JFrame chartFrame = null;
+
     @Command
     public void showGraph() {
-        JFrame frame = new JFrame("Graph");
-        ZoomableChart chart = new ZoomableChart();
-        chart.addTrace(energyTrace);
-        frame.getRootPane().add(new ChartPanel(chart));
-        frame.setVisible(true);
+        if (chartFrame == null) {
+            JFrame frame = new JFrame("Graph");
+            ZoomableChart chart = new ZoomableChart();
+            chart.addTrace(energyTrace);
+            frame.getRootPane().add(new ChartPanel(chart));
+            chartFrame = frame;
+        }
+        chartFrame.setVisible(true);
     }
 
     private ITrace2D energyTrace = new Trace2DLtd(10000, "energy");
@@ -275,7 +280,7 @@ public class TrajectorySolver {
     }
 
     private int maxSteps = 10000;
-    private double dt;
+    private double dt = 0.001;
     private Vector r0;
     private Vector dirV0;
     private double k0;
