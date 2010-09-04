@@ -4,11 +4,15 @@ import asg.cliche.Command;
 import asg.cliche.Param;
 import asg.cliche.ShellFactory;
 import geopt.geometry.Vector;
+import info.monitorenter.gui.chart.IAxis.AxisTitle;
 import info.monitorenter.gui.chart.ITrace2D;
 import info.monitorenter.gui.chart.ZoomableChart;
 import info.monitorenter.gui.chart.traces.Trace2DLtd;
+import info.monitorenter.gui.chart.traces.Trace2DSimple;
 import info.monitorenter.gui.chart.views.ChartPanel;
+import java.awt.Color;
 import java.awt.Dimension;
+import java.awt.GridLayout;
 import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
@@ -252,28 +256,24 @@ public class TrajectorySolver {
         if (chartFrame == null) {
             JFrame frame = new JFrame("Graph");
             frame.setSize(new Dimension(600, 400));
-            ZoomableChart chart = new ZoomableChart();
-            chart.addTrace(energyTrace);
-            chart.addTrace(xCoordTrace);
-            chart.addTrace(yCoordTrace);
-            chart.addTrace(zCoordTrace);
-            frame.getContentPane().add(new ChartPanel(chart));
+            frame.getContentPane().setLayout(new GridLayout(1, 2));
+
+            frame.getContentPane().add(new ChartPanel(energyPlottingCallback.createChart()));
+            frame.getContentPane().add(new ChartPanel(coordPlottingCallback.createChart()));
+
             chartFrame = frame;
         }
         chartFrame.setVisible(true);
     }
 
-    private static final int TRACE_SIZE_LIMIT = 10000;
+//    private static final int TRACE_SIZE_LIMIT = 10000;
     
-    private ITrace2D energyTrace = new Trace2DLtd(TRACE_SIZE_LIMIT, "energy");
-    private Callback energyPlottingCallback = new EnergyPlottingCallback();
-
-    private ITrace2D xCoordTrace = new Trace2DLtd(TRACE_SIZE_LIMIT, "x");
-    private ITrace2D yCoordTrace = new Trace2DLtd(TRACE_SIZE_LIMIT, "y");
-    private ITrace2D zCoordTrace = new Trace2DLtd(TRACE_SIZE_LIMIT, "z");
-    private Callback coordPlottingCallback = new XYZPlottingCallback();
+    private PlottingCallback energyPlottingCallback = new EnergyPlottingCallback();
+    private PlottingCallback coordPlottingCallback = new XYZPlottingCallback();
 
     private abstract class PlottingCallback implements Callback {
+
+        public abstract ZoomableChart createChart();
 
         protected double m;
         protected double e;
@@ -293,6 +293,17 @@ public class TrajectorySolver {
     
     private class EnergyPlottingCallback extends PlottingCallback {
 
+        @Override
+        public ZoomableChart createChart() {
+            ZoomableChart c = new ZoomableChart();
+            c.getAxisX().setAxisTitle(new AxisTitle("t"));
+            c.getAxisY().setAxisTitle(new AxisTitle("energy, eV"));
+            c.addTrace(energyTrace);
+            return c;
+        }
+
+        private ITrace2D energyTrace = new Trace2DSimple("energy");
+
         protected void clearTraces() {
             energyTrace.removeAllPoints();
         }
@@ -303,6 +314,27 @@ public class TrajectorySolver {
     }
     
     private class XYZPlottingCallback extends PlottingCallback {
+
+        private ITrace2D xCoordTrace = new Trace2DSimple("x");
+        private ITrace2D yCoordTrace = new Trace2DSimple("y");
+        private ITrace2D zCoordTrace = new Trace2DSimple("z");
+
+        @Override
+        public ZoomableChart createChart() {
+            ZoomableChart c = new ZoomableChart();
+            c.getAxisX().setAxisTitle(new AxisTitle("t"));
+            c.getAxisY().setAxisTitle(new AxisTitle("coordinate"));
+
+            xCoordTrace.setColor(Color.RED);
+            yCoordTrace.setColor(Color.GREEN);
+            zCoordTrace.setColor(Color.BLUE);
+
+            c.addTrace(xCoordTrace);
+            c.addTrace(yCoordTrace);
+            c.addTrace(zCoordTrace);
+
+            return c;
+        }
 
         protected void clearTraces() {
             xCoordTrace.removeAllPoints();
@@ -394,7 +426,7 @@ public class TrajectorySolver {
                 k0, dirV0.getX(), dirV0.getY(), dirV0.getZ(),
                 maxSteps,
                 energyPlottingCallback,
-//                coordPlottingCallback,
+                coordPlottingCallback,
                 writer);
     }
 
