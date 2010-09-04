@@ -8,8 +8,11 @@ import info.monitorenter.gui.chart.ITrace2D;
 import info.monitorenter.gui.chart.ZoomableChart;
 import info.monitorenter.gui.chart.traces.Trace2DLtd;
 import info.monitorenter.gui.chart.views.ChartPanel;
+import java.awt.Dimension;
+import java.io.BufferedOutputStream;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.PrintStream;
 import java.util.Scanner;
@@ -68,17 +71,15 @@ public class TrajectorySolver {
         }
     }
 
-    private static double h = 1.0e-3;
-
     // ix < dimX - 1, etc.
     private double dx(int ix, int iy, int iz) {
-        return (potential[ix + 1][iy][iz] - potential[ix][iy][iz]) / h;
+        return (potential[ix + 1][iy][iz] - potential[ix][iy][iz]);
     }
     private double dy(int ix, int iy, int iz) {
-        return (potential[ix][iy + 1][iz] - potential[ix][iy][iz]) / h;
+        return (potential[ix][iy + 1][iz] - potential[ix][iy][iz]);
     }
     private double dz(int ix, int iy, int iz) {
-        return (potential[ix][iy][iz + 1] - potential[ix][iy][iz]) / h;
+        return (potential[ix][iy][iz + 1] - potential[ix][iy][iz]);
     }
 
     @Command
@@ -163,9 +164,37 @@ public class TrajectorySolver {
     }
 
     @Command
-    public double getPotential(double x, double y, double z) {
+    public final double getPotential(double x, double y, double z) {
         return interpolate(potential, x, y, z);
     }
+
+    private final double getEnergy(double e, double m,
+            double x, double y, double z,
+            double vx, double vy, double vz) {
+        return -e * getPotential(x, y, z) + m * (vx*vx + vy*vy + vz*vz) / (2 * K);
+    }
+
+    /**
+     * On the unit system
+     *
+     * The user specifies quantities in following units:
+     *  e  |e| units
+     *  E  eV
+     *  m  amu
+     *  V  V
+     *  x  arb.u.
+     *  t  arb.u.
+     * Where arbitrary units for x and t are in agreement:
+     * if x is in mm, then t in ms, x in um, then t in us, etc.
+     *
+     * The Newton's equation is
+     *       e/m dV/dx = d2x/dt2, quantities in SI.
+     * Transforming the eq. to our unit system:
+     *       K e/m dV/dx = d2x/dt2, where K = |elemCharge|/1amu = |elemCharge|*NAvogadro*1000/1kg
+     * The same K appears in v(E): v = sqrt(2E/m) SI => v = sqrt(2E/m K),
+     *   Ekinetic = mv2/2K for the same reason.
+     */
+    private static final double K = 9.648534147e6;
 
     public void solve(double dt, double m, double e,
                 double x0, double y0, double z0,
@@ -179,7 +208,7 @@ public class TrajectorySolver {
 
         Vector dir = new Vector(dirX, dirY, dirZ);
         dir.normalizeIt();
-        Vector v0 = dir.multiply(Math.sqrt(kineticE * 2 / m));
+        Vector v0 = dir.multiply(Math.sqrt(kineticE * 2 / m * K));
 
         int steps = 0;
         double t = 0;
@@ -191,15 +220,17 @@ public class TrajectorySolver {
                 x >= 0 && x <= dimX &&
                 y >= 0 && y <= dimY &&
                 z >= 0 && z <= dimZ) {
+            steps++;
+
             es = getIntensity(x, y, z);
             if (es == null) {
                 break;
             }
             t+= dt;
 
-            vx += dt * es[X] * e / m;
-            vy += dt * es[Y] * e / m;
-            vz += dt * es[Z] * e / m;
+            vx += dt * es[X] * e / m * K;
+            vy += dt * es[Y] * e / m * K;
+            vz += dt * es[Z] * e / m * K;
 
             x += dt * vx;
             y += dt * vy;
@@ -209,6 +240,9 @@ public class TrajectorySolver {
                 c.point(t, x, y, z, vx, vy, vz);
             }
         }
+        for (Callback c : callbacks) {
+            c.close();
+        }
     }
 
     private JFrame chartFrame = null;
@@ -217,33 +251,70 @@ public class TrajectorySolver {
     public void showGraph() {
         if (chartFrame == null) {
             JFrame frame = new JFrame("Graph");
+            frame.setSize(new Dimension(600, 400));
             ZoomableChart chart = new ZoomableChart();
             chart.addTrace(energyTrace);
-            frame.getRootPane().add(new ChartPanel(chart));
+            chart.addTrace(xCoordTrace);
+            chart.addTrace(yCoordTrace);
+            chart.addTrace(zCoordTrace);
+            frame.getContentPane().add(new ChartPanel(chart));
             chartFrame = frame;
         }
         chartFrame.setVisible(true);
     }
 
-    private ITrace2D energyTrace = new Trace2DLtd(10000, "energy");
-    private Callback energyPlottingCallback = new EnergyPllottingCallback();
+    private static final int TRACE_SIZE_LIMIT = 10000;
+    
+    private ITrace2D energyTrace = new Trace2DLtd(TRACE_SIZE_LIMIT, "energy");
+    private Callback energyPlottingCallback = new EnergyPlottingCallback();
 
-    private class EnergyPllottingCallback implements Callback {
+    private ITrace2D xCoordTrace = new Trace2DLtd(TRACE_SIZE_LIMIT, "x");
+    private ITrace2D yCoordTrace = new Trace2DLtd(TRACE_SIZE_LIMIT, "y");
+    private ITrace2D zCoordTrace = new Trace2DLtd(TRACE_SIZE_LIMIT, "z");
+    private Callback coordPlottingCallback = new XYZPlottingCallback();
 
-        private double m;
-        private double e;
+    private abstract class PlottingCallback implements Callback {
+
+        protected double m;
+        protected double e;
+
+        protected abstract void clearTraces();
 
         public void params(double dt, double m, double e, double x0, double y0, double z0, double kineticE, double dirX, double dirY, double dirZ) {
+            clearTraces();
             this.m = m;
             this.e = e;
         }
 
-        public void point(double t, double x, double y, double z, double vx, double vy, double vz) {
-            final double fullE = e * getPotential(x, y, z) + (vx*vx + vy*vy + vz*vz) * m / 2;
-            energyTrace.addPoint(t, fullE);
-        }
+        public abstract void point(double t, double x, double y, double z, double vx, double vy, double vz);
 
         public void close() {}
+    }
+    
+    private class EnergyPlottingCallback extends PlottingCallback {
+
+        protected void clearTraces() {
+            energyTrace.removeAllPoints();
+        }
+
+        public void point(double t, double x, double y, double z, double vx, double vy, double vz) {
+            energyTrace.addPoint(t, getEnergy(e, m, x, y, z, vx, vy, vz));
+        }        
+    }
+    
+    private class XYZPlottingCallback extends PlottingCallback {
+
+        protected void clearTraces() {
+            xCoordTrace.removeAllPoints();
+            yCoordTrace.removeAllPoints();
+            zCoordTrace.removeAllPoints();
+        }
+
+        public void point(double t, double x, double y, double z, double vx, double vy, double vz) {
+            xCoordTrace.addPoint(t, x);
+            yCoordTrace.addPoint(t, y);
+            zCoordTrace.addPoint(t, z);
+        }
     }
 
     private class OutputCallback implements Callback {
@@ -316,14 +387,21 @@ public class TrajectorySolver {
 
     @Command
     public void fly(String outFileBase) throws FileNotFoundException {
-        final Callback writer = new OutputCallback(new PrintStream(outFileBase + ".txt"));
+        final Callback writer = new OutputCallback(new PrintStream(
+                new BufferedOutputStream(new FileOutputStream(outFileBase + ".txt"))));
         solve(dt, mass, charge, 
                 r0.getX(), r0.getY(), r0.getZ(),
                 k0, dirV0.getX(), dirV0.getY(), dirV0.getZ(),
                 maxSteps,
-                energyPlottingCallback, writer);
+                energyPlottingCallback,
+//                coordPlottingCallback,
+                writer);
     }
 
+    @Command
+    public void exit() {
+        System.exit(0);
+    }
 
     /**
      * @param args the command line arguments
