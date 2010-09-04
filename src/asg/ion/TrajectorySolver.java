@@ -87,9 +87,9 @@ public class TrajectorySolver {
         for (int ix = 0; ix < dimX - 1; ix++) {
             for (int iy = 0; iy < dimY - 1; iy++) {
                 for (int iz = 0; iz < dimZ - 1; iz++) {
-                    eX[ix][iy][iz] = dx(ix, iy, iz);
-                    eY[ix][iy][iz] = dy(ix, iy, iz);
-                    eZ[ix][iy][iz] = dz(ix, iy, iz);
+                    eX[ix][iy][iz] = -dx(ix, iy, iz);
+                    eY[ix][iy][iz] = -dy(ix, iy, iz);
+                    eZ[ix][iy][iz] = -dz(ix, iy, iz);
                 }
                 eX[ix][iy][dimZ - 1] = dx(ix, iy, dimZ - 2);
             }
@@ -171,7 +171,7 @@ public class TrajectorySolver {
     private final double getEnergy(double e, double m,
             double x, double y, double z,
             double vx, double vy, double vz) {
-        return -e * getPotential(x, y, z) + m * (vx*vx + vy*vy + vz*vz) / (2 * K);
+        return e * getPotential(x, y, z) + m * (vx*vx + vy*vy + vz*vz) / (2 * K);
     }
 
     /**
