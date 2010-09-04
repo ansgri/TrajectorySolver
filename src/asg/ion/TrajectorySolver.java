@@ -446,16 +446,27 @@ public class TrajectorySolver {
 
     @Command
     public void fly(String outFileBase) throws FileNotFoundException {
+        fly(outFileBase, true);
+    }
+
+    @Command
+    public void fly(String outFileBase, boolean showGraph) throws FileNotFoundException {
+        if (showGraph) {
+            showGraph();
+        }
         final Callback writer = new OutputCallback(new PrintStream(
                 new BufferedOutputStream(new FileOutputStream(outFileBase + ".txt"))));
+        Callback[] callbacks = showGraph ?
+            new Callback[] {energyPlottingCallback,
+                coordPlottingCallback,
+                intensityPlottingCallback,
+                writer} :
+            new Callback[] {writer};
         solve(dt, mass, charge, 
                 r0.getX(), r0.getY(), r0.getZ(),
                 k0, dirV0.getX(), dirV0.getY(), dirV0.getZ(),
                 maxSteps,
-                energyPlottingCallback,
-                coordPlottingCallback,
-                intensityPlottingCallback,
-                writer);
+                callbacks);
     }
 
     @Command
