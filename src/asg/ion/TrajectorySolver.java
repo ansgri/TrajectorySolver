@@ -418,39 +418,49 @@ public class TrajectorySolver {
     private double mass;
 
     @Command
-    public void setDt(double dt) {
+    public void setDt(@Param(name="dt") double dt) {
         this.dt = dt;
     }
 
     @Command
-    public void setMaxSteps(int maxSteps) {
+    public void setMaxSteps(@Param(name="max-steps") int maxSteps) {
         this.maxSteps = maxSteps;
     }
 
     @Command
-    public void setParticle(double m, double e) {
+    public void setParticle(@Param(name="m") double m, @Param(name="e") double e) {
         this.mass = m;
         this.charge = e;
     }
 
     @Command
-    public void setV0(double energy, double dirX, double dirY, double dirZ) {
+    public void setV0(
+            @Param(name="K") double energy,
+            @Param(name="dir-x") double dirX,
+            @Param(name="dir-y") double dirY,
+            @Param(name="dir-z") double dirZ) {
         this.k0 = energy;
         this.dirV0 = new Vector(dirX, dirY, dirZ);
     }
 
     @Command
-    public void setR0(double x, double y, double z) {
+    public void setR0(
+            @Param(name="x") double x,
+            @Param(name="y") double y,
+            @Param(name="z") double z) {
         this.r0 = new Vector(x, y, z);
     }
 
     @Command
-    public void fly(String outFileBase) throws FileNotFoundException {
+    public void fly(@Param(name="out-file-base") String outFileBase) throws FileNotFoundException {
         fly(outFileBase, true);
     }
 
     @Command
-    public void fly(String outFileBase, boolean showGraph) throws FileNotFoundException {
+    public void fly(
+            @Param(name="out-file-base") String outFileBase,
+            @Param(name="show-graph") boolean showGraph) throws FileNotFoundException {
+
         if (showGraph) {
             showGraph();
         }
