@@ -255,11 +255,12 @@ public class TrajectorySolver {
     public void showGraph() {
         if (chartFrame == null) {
             JFrame frame = new JFrame("Graph");
-            frame.setSize(new Dimension(600, 400));
-            frame.getContentPane().setLayout(new GridLayout(1, 2));
+            frame.setSize(new Dimension(600, 600));
+            frame.getContentPane().setLayout(new GridLayout(2, 2));
 
             frame.getContentPane().add(new ChartPanel(energyPlottingCallback.createChart()));
             frame.getContentPane().add(new ChartPanel(coordPlottingCallback.createChart()));
+            frame.getContentPane().add(new ChartPanel(intensityPlottingCallback.createChart()));
 
             chartFrame = frame;
         }
@@ -270,6 +271,7 @@ public class TrajectorySolver {
     
     private PlottingCallback energyPlottingCallback = new EnergyPlottingCallback();
     private PlottingCallback coordPlottingCallback = new XYZPlottingCallback();
+    private PlottingCallback intensityPlottingCallback = new IntensityPlottingCallback();
 
     private abstract class PlottingCallback implements Callback {
 
@@ -311,6 +313,31 @@ public class TrajectorySolver {
         public void point(double t, double x, double y, double z, double vx, double vy, double vz) {
             energyTrace.addPoint(t, getEnergy(e, m, x, y, z, vx, vy, vz));
         }        
+    }
+
+    private class IntensityPlottingCallback extends PlottingCallback {
+
+        @Override
+        public ZoomableChart createChart() {
+            ZoomableChart c = new ZoomableChart();
+            c.getAxisX().setAxisTitle(new AxisTitle("t"));
+            c.getAxisY().setAxisTitle(new AxisTitle("|E|"));
+            c.addTrace(trace);
+            return c;
+        }
+
+        private ITrace2D trace = new Trace2DSimple("field strength");
+
+        protected void clearTraces() {
+            trace.removeAllPoints();
+        }
+
+        public void point(double t, double x, double y, double z, double vx, double vy, double vz) {
+            final double[] es = getIntensity(x, y, z);
+            if (es != null) {
+                trace.addPoint(t, es[X]*es[X] + es[Y]*es[Y] + es[Z]*es[Z]);
+            }
+        }
     }
     
     private class XYZPlottingCallback extends PlottingCallback {
@@ -427,6 +454,7 @@ public class TrajectorySolver {
                 maxSteps,
                 energyPlottingCallback,
                 coordPlottingCallback,
+                intensityPlottingCallback,
                 writer);
     }
 
