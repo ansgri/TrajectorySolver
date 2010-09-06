@@ -137,9 +137,12 @@ public class TrajectorySolver {
         }
 
         return new double[] {
-            interpolate(eX, x, y, z),
-            interpolate(eY, x, y, z),
-            interpolate(eZ, x, y, z)
+//            eX[ix][iy][iz],
+//            eY[ix][iy][iz],
+//            eZ[ix][iy][iz],
+            (interpolate(potential, x, y, z) - interpolate(potential, x + 1, y, z)) / 1,
+            (interpolate(potential, x, y, z) - interpolate(potential, x, y + 1, z)) / 1,
+            (interpolate(potential, x, y, z) - interpolate(potential, x, y, z + 1)) / 1
         };
     }
 
