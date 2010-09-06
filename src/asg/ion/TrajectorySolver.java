@@ -7,7 +7,6 @@ import geopt.geometry.Vector;
 import info.monitorenter.gui.chart.IAxis.AxisTitle;
 import info.monitorenter.gui.chart.ITrace2D;
 import info.monitorenter.gui.chart.ZoomableChart;
-import info.monitorenter.gui.chart.traces.Trace2DLtd;
 import info.monitorenter.gui.chart.traces.Trace2DSimple;
 import info.monitorenter.gui.chart.views.ChartPanel;
 import java.awt.Color;
@@ -261,6 +260,7 @@ public class TrajectorySolver {
             frame.getContentPane().add(new ChartPanel(energyPlottingCallback.createChart()));
             frame.getContentPane().add(new ChartPanel(coordPlottingCallback.createChart()));
             frame.getContentPane().add(new ChartPanel(intensityPlottingCallback.createChart()));
+            frame.getContentPane().add(new ChartPanel(xyPlottingCallback.createChart()));
 
             chartFrame = frame;
         }
@@ -271,6 +271,7 @@ public class TrajectorySolver {
     
     private PlottingCallback energyPlottingCallback = new EnergyPlottingCallback();
     private PlottingCallback coordPlottingCallback = new XYZPlottingCallback();
+    private PlottingCallback xyPlottingCallback = new XYPlottingCallback();
     private PlottingCallback intensityPlottingCallback = new IntensityPlottingCallback();
 
     private abstract class PlottingCallback implements Callback {
@@ -376,6 +377,30 @@ public class TrajectorySolver {
         }
     }
 
+    private class XYPlottingCallback extends PlottingCallback {
+
+        private ITrace2D coordTrace = new Trace2DSimple("x-y trajectory");
+
+        @Override
+        public ZoomableChart createChart() {
+            ZoomableChart c = new ZoomableChart();
+            c.getAxisX().setAxisTitle(new AxisTitle("x"));
+            c.getAxisY().setAxisTitle(new AxisTitle("y"));
+
+            c.addTrace(coordTrace);
+
+            return c;
+        }
+
+        protected void clearTraces() {
+            coordTrace.removeAllPoints();
+        }
+
+        public void point(double t, double x, double y, double z, double vx, double vy, double vz) {
+            coordTrace.addPoint(x, y);
+        }
+    }
+
     private class OutputCallback implements Callback {
 
         private PrintStream s;
@@ -470,6 +495,7 @@ public class TrajectorySolver {
             new Callback[] {energyPlottingCallback,
                 coordPlottingCallback,
                 intensityPlottingCallback,
+                xyPlottingCallback,
                 writer} :
             new Callback[] {writer};
         solve(dt, mass, charge, 
