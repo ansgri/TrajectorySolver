@@ -346,7 +346,16 @@ public class TrajectorySolver {
         return t;
     }
 
+    private int maxPointsInTrace = 5000;
+
+    @Command
+    public void setMaxPointsInTrace(int maxPointsInTrace) {
+        this.maxPointsInTrace = maxPointsInTrace;
+    }
+
     private abstract class PlottingCallback implements Callback {
+
+        private int points;
 
         public abstract ZoomableChart createChart();
 
@@ -356,12 +365,19 @@ public class TrajectorySolver {
         protected abstract void clearTraces();
 
         public void params(double dt, double m, double e, double x0, double y0, double z0, double kineticE, double dirX, double dirY, double dirZ) {
+            points = 0;
             clearTraces();
             this.m = m;
             this.e = e;
         }
 
-        public abstract void point(double t, double x, double y, double z, double vx, double vy, double vz);
+        public void point(double t, double x, double y, double z, double vx, double vy, double vz) {
+            points++;
+            if (points > maxPointsInTrace) {
+                clearTraces();
+                points = 0;
+            }
+        }
 
         public void close() {}
     }
@@ -383,7 +399,9 @@ public class TrajectorySolver {
             energyTrace.removeAllPoints();
         }
 
+        @Override
         public void point(double t, double x, double y, double z, double vx, double vy, double vz) {
+            super.point(t, x, y, z, vx, vy, vz);
             energyTrace.addPoint(t, getEnergy(e, m, x, y, z, vx, vy, vz));
         }        
     }
@@ -405,7 +423,9 @@ public class TrajectorySolver {
             trace.removeAllPoints();
         }
 
+        @Override
         public void point(double t, double x, double y, double z, double vx, double vy, double vz) {
+            super.point(t, x, y, z, vx, vy, vz);
             final double[] es = getIntensity(x, y, z);
             if (es != null) {
                 trace.addPoint(t, es[X]*es[X] + es[Y]*es[Y] + es[Z]*es[Z]);
@@ -442,7 +462,9 @@ public class TrajectorySolver {
             zCoordTrace.removeAllPoints();
         }
 
+        @Override
         public void point(double t, double x, double y, double z, double vx, double vy, double vz) {
+            super.point(t, x, y, z, vx, vy, vz);
             xCoordTrace.addPoint(t, x);
             yCoordTrace.addPoint(t, y);
             zCoordTrace.addPoint(t, z);
@@ -468,7 +490,9 @@ public class TrajectorySolver {
             coordTrace.removeAllPoints();
         }
 
+        @Override
         public void point(double t, double x, double y, double z, double vx, double vy, double vz) {
+            super.point(t, x, y, z, vx, vy, vz);
             coordTrace.addPoint(x, y);
         }
     }
