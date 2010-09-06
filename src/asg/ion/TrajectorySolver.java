@@ -220,9 +220,9 @@ public class TrajectorySolver {
 
         double[] es;
         while ((maxSteps <= 0 || steps < maxSteps) &&
-                x >= 0 && x <= dimX &&
-                y >= 0 && y <= dimY &&
-                z >= 0 && z <= dimZ) {
+                x >= 0 && x < dimX &&
+                y >= 0 && y < dimY &&
+                z >= 0 && z < dimZ) {
             steps++;
 
             es = getIntensity(x, y, z);
@@ -241,6 +241,69 @@ public class TrajectorySolver {
 
             for (Callback c : callbacks) {
                 c.point(t, x, y, z, vx, vy, vz);
+            }
+        }
+        for (Callback c : callbacks) {
+            c.close();
+        }
+    }
+
+    private static final void mov3(double[] dst, double[] src) {
+        dst[0] = src[0];
+        dst[1] = src[1];
+        dst[2] = src[2];
+    }
+
+    // second order
+    public void solve2(double dt, double m, double e,
+                double x0, double y0, double z0,
+                double kineticE, double dirX, double dirY, double dirZ,
+                int maxSteps,
+                Callback... callbacks) {
+
+        for (Callback c : callbacks) {
+            c.params(dt, m, e, x0, y0, z0, kineticE, dirX, dirY, dirZ);
+        }
+
+        Vector dir = new Vector(dirX, dirY, dirZ);
+        dir.normalizeIt();
+        Vector v0 = dir.multiply(Math.sqrt(kineticE * 2 / m * K));
+
+        int steps = 0;
+        double t = 0;
+
+        double[] v = new double[] {v0.getX(), v0.getY(), v0.getZ()};
+
+        double[] xPrev = new double[] {x0, y0, z0};
+        double[] x = new double[] {x0 + v[X] * dt, y0 + v[Y] * dt, z0 + v[Z] * dt};
+        double[] xNew = new double[3];
+
+        double[] es;
+
+        while ((maxSteps <= 0 || steps < maxSteps) &&
+                x[X] >= 0 && x[X] < dimX &&
+                x[Y] >= 0 && x[Y] < dimY &&
+                x[Z] >= 0 && x[Z] < dimZ) {
+            steps++;
+
+            es = getIntensity(x[X], x[Y], x[Z]);
+            if (es == null) {
+                break;
+            }
+            t+= dt;
+
+            xNew[X] = 2 * x[X] - xPrev[X] + K * e * es[X] / m * dt * dt;
+            xNew[Y] = 2 * x[Y] - xPrev[Y] + K * e * es[Y] / m * dt * dt;
+            xNew[Z] = 2 * x[Z] - xPrev[Z] + K * e * es[Z] / m * dt * dt;
+            mov3(xPrev, x);
+            mov3(x, xNew);
+
+            v[X] = (x[X] - xPrev[X]) / dt;
+            v[Y] = (x[Y] - xPrev[Y]) / dt;
+            v[Z] = (x[Z] - xPrev[Z]) / dt;
+
+            for (Callback c : callbacks) {
+                c.point(t, x[X], x[Y], x[Z], v[X], v[Y], v[Z]);
             }
         }
         for (Callback c : callbacks) {
@@ -498,7 +561,7 @@ public class TrajectorySolver {
                 xyPlottingCallback,
                 writer} :
             new Callback[] {writer};
-        solve(dt, mass, charge, 
+        solve2(dt, mass, charge,
                 r0.getX(), r0.getY(), r0.getZ(),
                 k0, dirV0.getX(), dirV0.getY(), dirV0.getZ(),
                 maxSteps,
