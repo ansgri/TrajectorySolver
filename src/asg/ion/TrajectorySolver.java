@@ -160,8 +160,8 @@ public class TrajectorySolver {
         final double
                 i1 = v[xF][yF][zF] * (1 - zd) + v[xF][yF][zC] * zd,
                 i2 = v[xF][yC][zF] * (1 - zd) + v[xF][yC][zC] * zd,
-                j1 = v[xC][yF][zF] * (1 - zd) + v[xF][yF][zC] * zd,
-                j2 = v[xC][yC][zF] * (1 - zd) + v[xF][yC][zC] * zd;
+                j1 = v[xC][yF][zF] * (1 - zd) + v[xC][yF][zC] * zd,
+                j2 = v[xC][yC][zF] * (1 - zd) + v[xC][yC][zC] * zd;
         final double
                 w1 = i1 * (1 - yd) + i2 * yd,
                 w2 = j1 * (1 - yd) + j2 * yd;
@@ -358,7 +358,7 @@ public class TrajectorySolver {
 
     private abstract class PlottingCallback implements Callback {
 
-        private int points;
+        protected int points;
 
         public abstract ZoomableChart createChart();
 
@@ -392,20 +392,35 @@ public class TrajectorySolver {
             ZoomableChart c = new ZoomableChart();
             c.getAxisX().setAxisTitle(new AxisTitle("t"));
             c.getAxisY().setAxisTitle(new AxisTitle("energy, eV"));
+            
+            vTrace.setColor(Color.BLUE);
+            kTrace.setColor(Color.RED);
+            
             c.addTrace(energyTrace);
+            c.addTrace(kTrace);
+            c.addTrace(vTrace);
+
             return c;
         }
 
         private ITrace2D energyTrace = createTrace("energy");
+        private ITrace2D vTrace = createTrace("V");
+        private ITrace2D kTrace = createTrace("K");
 
         protected void clearTraces() {
             energyTrace.removeAllPoints();
+            vTrace.removeAllPoints();
+            kTrace.removeAllPoints();
         }
 
         @Override
         public void point(double t, double x, double y, double z, double vx, double vy, double vz) {
             super.point(t, x, y, z, vx, vy, vz);
-            energyTrace.addPoint(t, getEnergy(e, m, x, y, z, vx, vy, vz));
+            double v = getEnergy(e, m, x, y, z, 0, 0, 0);
+            double ee = getEnergy(e, m, x, y, z, vx, vy, vz);
+            energyTrace.addPoint(t, ee);
+            vTrace.addPoint(t, v);
+            kTrace.addPoint(t, ee - v);
         }        
     }
 
