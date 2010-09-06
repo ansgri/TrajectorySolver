@@ -340,6 +340,12 @@ public class TrajectorySolver {
     private PlottingCallback xyPlottingCallback = new XYPlottingCallback();
     private PlottingCallback intensityPlottingCallback = new IntensityPlottingCallback();
 
+    private final ITrace2D createTrace(String name) {
+        Trace2DSimple t = new Trace2DSimple();
+        t.setName(name);
+        return t;
+    }
+
     private abstract class PlottingCallback implements Callback {
 
         public abstract ZoomableChart createChart();
@@ -371,7 +377,7 @@ public class TrajectorySolver {
             return c;
         }
 
-        private ITrace2D energyTrace = new Trace2DSimple("energy");
+        private ITrace2D energyTrace = createTrace("energy");
 
         protected void clearTraces() {
             energyTrace.removeAllPoints();
@@ -393,7 +399,7 @@ public class TrajectorySolver {
             return c;
         }
 
-        private ITrace2D trace = new Trace2DSimple("field strength");
+        private ITrace2D trace = createTrace("field strength");
 
         protected void clearTraces() {
             trace.removeAllPoints();
@@ -409,9 +415,9 @@ public class TrajectorySolver {
     
     private class XYZPlottingCallback extends PlottingCallback {
 
-        private ITrace2D xCoordTrace = new Trace2DSimple("x");
-        private ITrace2D yCoordTrace = new Trace2DSimple("y");
-        private ITrace2D zCoordTrace = new Trace2DSimple("z");
+        private ITrace2D xCoordTrace = createTrace("x");
+        private ITrace2D yCoordTrace = createTrace("y");
+        private ITrace2D zCoordTrace = createTrace("z");
 
         @Override
         public ZoomableChart createChart() {
@@ -445,7 +451,7 @@ public class TrajectorySolver {
 
     private class XYPlottingCallback extends PlottingCallback {
 
-        private ITrace2D coordTrace = new Trace2DSimple("x-y trajectory");
+        private ITrace2D coordTrace = createTrace("x-y trajectory");
 
         @Override
         public ZoomableChart createChart() {
