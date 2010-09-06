@@ -274,33 +274,36 @@ public class TrajectorySolver {
 
         double[] v = new double[] {v0.getX(), v0.getY(), v0.getZ()};
 
-        double[] xPrev = new double[] {x0, y0, z0};
+        double[] xP2 = new double[] {x0 - v[X] * dt, y0 - v[Y] * dt, z0 - v[Z] * dt};
+        double[] xP1 = new double[] {x0, y0, z0};
         double[] x = new double[] {x0 + v[X] * dt, y0 + v[Y] * dt, z0 + v[Z] * dt};
         double[] xNew = new double[3];
 
         double[] es;
 
         while ((maxSteps <= 0 || steps < maxSteps) &&
-                x[X] >= 0 && x[X] < dimX &&
-                x[Y] >= 0 && x[Y] < dimY &&
-                x[Z] >= 0 && x[Z] < dimZ) {
+                x[X] > 1 && x[X] < dimX-1 &&
+                x[Y] > 1 && x[Y] < dimY-1 &&
+                x[Z] > 1 && x[Z] < dimZ-1) {
             steps++;
 
-            es = getIntensity(x[X], x[Y], x[Z]);
+            t+= dt;
+            es = getIntensity((x[X] + xP1[X]) / 2, (x[Y] + xP1[Y]) / 2, (x[Z] + xP1[Z]) / 2);
             if (es == null) {
                 break;
             }
-            t+= dt;
 
-            xNew[X] = 2 * x[X] - xPrev[X] + K * e * es[X] / m * dt * dt;
-            xNew[Y] = 2 * x[Y] - xPrev[Y] + K * e * es[Y] / m * dt * dt;
-            xNew[Z] = 2 * x[Z] - xPrev[Z] + K * e * es[Z] / m * dt * dt;
-            mov3(xPrev, x);
+            xNew[X] = x[X] + xP1[X] - xP2[X] + 2 * K * e * es[X] / m * dt * dt;
+            xNew[Y] = x[Y] + xP1[Y] - xP2[Y] + 2 * K * e * es[Y] / m * dt * dt;
+            xNew[Z] = x[Z] + xP1[Z] - xP2[Z] + 2 * K * e * es[Z] / m * dt * dt;
+
+            mov3(xP2, xP1);
+            mov3(xP1, x);
             mov3(x, xNew);
 
-            v[X] = (x[X] - xPrev[X]) / dt;
-            v[Y] = (x[Y] - xPrev[Y]) / dt;
-            v[Z] = (x[Z] - xPrev[Z]) / dt;
+            v[X] = (x[X] - xP2[X]) / (2 * dt);
+            v[Y] = (x[Y] - xP2[Y]) / (2 * dt);
+            v[Z] = (x[Z] - xP2[Z]) / (2 * dt);
 
             for (Callback c : callbacks) {
                 c.point(t, x[X], x[Y], x[Z], v[X], v[Y], v[Z]);
